@@ -18,6 +18,8 @@ public class User {
     private String state;
     private String zip;
     private String country;
+    // user role (e.g. ROLE_USER, ROLE_ADMIN). default to customer role
+    private String role = "ROLE_USER";
 
     public User() {}
 
@@ -37,6 +39,8 @@ public class User {
     }
 
     // getters and setters
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getFirstName() { return firstName; }

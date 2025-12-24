@@ -6,11 +6,14 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
 
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil {
@@ -29,11 +32,21 @@ public class JwtUtil {
     }
 
     public String generateToken(UserDetails userDetails) {
+        // delegate to overloaded method by deriving roles from authorities
+        Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
+        String roles = authorities.stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(","));
+        return generateToken(userDetails, roles);
+    }
+
+    // Overloaded: generate token using explicit role string (from DB). This ensures the
+    // role claim reflects the stored user role when provided.
+    public String generateToken(UserDetails userDetails, String role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
+                .claim("role", role)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -54,4 +67,3 @@ public class JwtUtil {
         }
     }
 }
-

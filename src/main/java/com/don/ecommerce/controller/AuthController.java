@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -73,12 +75,45 @@ public class AuthController {
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(req.getEmail());
-        String token = jwtUtil.generateToken(userDetails);
+        // load full user from DB to read stored role and include it in the token
+        User user = userRepository.findByEmail(req.getEmail()).orElseThrow();
+        String token = jwtUtil.generateToken(userDetails, user.getRole());
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("token", token);
         resp.put("email", req.getEmail());
+        resp.put("role", user.getRole());
 
         return ResponseEntity.ok(resp);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> me() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthenticated"));
+        }
+
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        }
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("id", user.getId());
+        out.put("firstName", user.getFirstName());
+        out.put("lastName", user.getLastName());
+        out.put("email", user.getEmail());
+        out.put("phone", user.getPhone());
+        out.put("streetAddress", user.getStreetAddress());
+        out.put("city", user.getCity());
+        out.put("state", user.getState());
+        out.put("zip", user.getZip());
+        out.put("country", user.getCountry());
+        out.put("role", user.getRole());
+
+        return ResponseEntity.ok(out);
+    }
+
 }

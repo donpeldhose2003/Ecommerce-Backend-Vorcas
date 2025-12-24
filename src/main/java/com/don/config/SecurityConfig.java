@@ -35,7 +35,11 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                // public endpoints
                 .requestMatchers("/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                // admin endpoints require ADMIN role
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                // all other endpoints require authentication
                 .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
