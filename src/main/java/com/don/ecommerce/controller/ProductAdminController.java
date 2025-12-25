@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/admin/products", "/admin/products"})
 public class ProductAdminController {
@@ -60,6 +62,21 @@ public class ProductAdminController {
         } catch (Exception e) {
             logger.error("ProductAdminController.createProductJson - exception while creating product", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save product: " + e.getMessage());
+        }
+    }
+
+    // list products (JSON)
+    @GetMapping(path = "/json", produces = {"application/json"})
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> listProductsJson() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        logger.debug("ProductAdminController.listProductsJson - auth={}", auth);
+        try {
+            List<Product> products = productService.getAllProducts();
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            logger.error("ProductAdminController.listProductsJson - failed to list products", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch products: " + e.getMessage());
         }
     }
 }

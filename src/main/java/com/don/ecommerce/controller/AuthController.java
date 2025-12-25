@@ -116,4 +116,10 @@ public class AuthController {
         return ResponseEntity.ok(out);
     }
 
+    @GetMapping("/count")
+    public ResponseEntity<?> countUsers() {
+        long count = userRepository.count();
+        return ResponseEntity.ok(Map.of("count", count));
+    }
+
 }

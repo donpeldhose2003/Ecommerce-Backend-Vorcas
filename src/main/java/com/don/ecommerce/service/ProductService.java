@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,6 +31,11 @@ public class ProductService {
         } catch (IOException e) {
             throw new RuntimeException("Could not create upload directory", e);
         }
+    }
+
+    // Return all stored products
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
     }
 
     public Product createProduct(Product product, MultipartFile image) throws IOException {

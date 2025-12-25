@@ -8,7 +8,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Service
@@ -23,10 +26,18 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
 
-        // grant authority based on role stored in user (e.g. ROLE_USER, ROLE_ADMIN)
+        // Normalize roles stored in DB to authorities with ROLE_ prefix
+        String roleStr = user.getRole() == null ? "ROLE_USER" : user.getRole();
+        List<SimpleGrantedAuthority> authorities = Arrays.stream(roleStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole())));
+                authorities);
     }
 }
