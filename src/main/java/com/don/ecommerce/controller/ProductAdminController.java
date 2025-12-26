@@ -79,4 +79,62 @@ public class ProductAdminController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch products: " + e.getMessage());
         }
     }
+
+    // NEW: update product (multipart with optional image)
+    @PutMapping(path = "/{id}", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateProduct(
+            @PathVariable("id") String id,
+            @RequestPart("product") Product product,
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        logger.debug("ProductAdminController.updateProduct - id={} auth={}", id, auth);
+        try {
+            Product updated = productService.updateProduct(id, product, image);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            logger.debug("ProductAdminController.updateProduct - bad request: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("ProductAdminController.updateProduct - exception while updating product", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update product: " + e.getMessage());
+        }
+    }
+
+    // NEW: JSON-only update (no image)
+    @PutMapping(path = "/{id}/json", consumes = {"application/json"})
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateProductJson(@PathVariable("id") String id, @RequestBody Product product) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        logger.debug("ProductAdminController.updateProductJson - id={} auth={}", id, auth);
+        try {
+            Product updated = productService.updateProduct(id, product, null);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            logger.debug("ProductAdminController.updateProductJson - bad request: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("ProductAdminController.updateProductJson - exception while updating product", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update product: " + e.getMessage());
+        }
+    }
+
+    // NEW: delete product
+    @DeleteMapping(path = "/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteProduct(@PathVariable("id") String id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        logger.debug("ProductAdminController.deleteProduct - id={} auth={}", id, auth);
+        try {
+            productService.deleteProduct(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            logger.debug("ProductAdminController.deleteProduct - not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("ProductAdminController.deleteProduct - exception while deleting product", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to delete product: " + e.getMessage());
+        }
+    }
 }

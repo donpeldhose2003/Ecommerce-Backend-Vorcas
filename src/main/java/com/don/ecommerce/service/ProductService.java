@@ -78,4 +78,86 @@ public class ProductService {
         if (original == null) return "file";
         return original.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
+
+    // New: get single product by id
+    public Product getProductById(String id) {
+        return productRepository.findById(id).orElse(null);
+    }
+
+    // New: update existing product; image optional (multipart)
+    public Product updateProduct(String id, Product updated, MultipartFile image) throws IOException {
+        Product existing = productRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        // update simple fields when provided (null-check)
+        if (updated.getName() != null) existing.setName(updated.getName());
+        if (updated.getCategory() != null) existing.setCategory(updated.getCategory());
+        if (updated.getSubCategory() != null) existing.setSubCategory(updated.getSubCategory());
+        if (updated.getCollectionName() != null) existing.setCollectionName(updated.getCollectionName());
+        if (updated.getGender() != null) existing.setGender(updated.getGender());
+        if (updated.getFit() != null) existing.setFit(updated.getFit());
+        if (updated.getDescription() != null) existing.setDescription(updated.getDescription());
+        if (updated.getMaterials() != null) existing.setMaterials(updated.getMaterials());
+        if (updated.getCareInstructions() != null) existing.setCareInstructions(updated.getCareInstructions());
+
+        if (updated.getSizes() != null) existing.setSizes(updated.getSizes());
+        if (updated.getColors() != null) existing.setColors(updated.getColors());
+
+        if (updated.getStockQuantity() != null) existing.setStockQuantity(updated.getStockQuantity());
+
+        // pricing: if originalPrice or discount provided, recompute
+        if (updated.getOriginalPrice() != null) {
+            existing.setOriginalPrice(updated.getOriginalPrice());
+        }
+        if (updated.getDiscountPercent() != null) {
+            existing.setDiscountPercent(updated.getDiscountPercent());
+        }
+        // compute finalPrice using current values
+        BigDecimal original = existing.getOriginalPrice();
+        Integer discount = existing.getDiscountPercent();
+        if (original != null && discount != null && discount >= 0 && discount <= 100) {
+            BigDecimal discountAmount = original.multiply(BigDecimal.valueOf(discount)).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            existing.setFinalPrice(original.subtract(discountAmount));
+        } else if (original != null) {
+            existing.setFinalPrice(original);
+        }
+
+        // update booleans (no null in primitive types in model, but updated may have defaults)
+        existing.setBestseller(updated.isBestseller());
+        existing.setFeatured(updated.isFeatured());
+        existing.setNewArrivals(updated.isNewArrivals());
+        existing.setLimitedEdition(updated.isLimitedEdition());
+        existing.setSale(updated.isSale());
+
+        // handle image replacement
+        if (image != null && !image.isEmpty()) {
+            validateImage(image);
+            // delete existing file if present
+            String oldPath = existing.getImagePath();
+            if (oldPath != null && oldPath.startsWith("/uploads/")) {
+                try {
+                    Path oldFile = this.uploadDir.resolve(oldPath.substring("/uploads/".length()));
+                    Files.deleteIfExists(oldFile);
+                } catch (IOException e) {
+                    // log and continue
+                }
+            }
+            String filename = System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + sanitizeFilename(image.getOriginalFilename());
+            Path target = this.uploadDir.resolve(filename);
+            Files.copy(image.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            existing.setImagePath("/uploads/" + filename);
+        }
+
+        return productRepository.save(existing);
+    }
+
+    // New: delete product and its image file if exists
+    public void deleteProduct(String id) throws IOException {
+        Product existing = productRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        String oldPath = existing.getImagePath();
+        if (oldPath != null && oldPath.startsWith("/uploads/")) {
+            Path oldFile = this.uploadDir.resolve(oldPath.substring("/uploads/".length()));
+            Files.deleteIfExists(oldFile);
+        }
+        productRepository.deleteById(id);
+    }
 }

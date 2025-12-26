@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // public endpoints (allow both /auth/** and /api/auth/** for frontend proxies)
                         .requestMatchers("/auth/**", "/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/error").permitAll()
+                        // allow public GET access to product listing endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/products/**").permitAll()
                         // admin endpoints require ADMIN role
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                         // all other endpoints require authentication
